@@ -7,6 +7,7 @@
 |---|---|---|
 | [`ai-intro-mobile`](ai-intro-mobile/) | 人工智慧導論（國專一甲等合開 30D1G801） | 普通教室＋學生自備手機 |
 | [`ai-intro-pc`](ai-intro-pc/) | 人工智慧導論（四技電子一乙 30D1G803） | 電腦教室 |
+| [`dl-undergrad`](dl-undergrad/) | 深度學習框架應用（大學部） | Colab 上機 |
 
 怎麼用：上課掃投影片上的 QR 碼，或直接點上表的資料夾進去，
 每週的筆記本在該資料夾的 README 裡都有 Colab 一鍵開啟連結。

@@ -1,0 +1,740 @@
+[
+    {
+        "id": "7ff96746a4e1bb18",
+        "type": "tab",
+        "label": "主題 12 gNN",
+        "disabled": false,
+        "info": "A 板 gNNa 的資料流：mqtt in → json → function → 儀表板；B 板 gNNb 的狀態燈與門檻。"
+    },
+    {
+        "id": "2cfc2da9ea3346d2",
+        "type": "mqtt-broker",
+        "name": "教室 broker",
+        "broker": "192.168.1.10",
+        "port": "1883",
+        "clientid": "wsn-gNNnr",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "c3628f5f902369af",
+        "type": "ui_tab",
+        "name": "E501 gNN",
+        "icon": "dashboard",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "9936e7445c4d1d68",
+        "type": "ui_group",
+        "name": "即時數值",
+        "tab": "c3628f5f902369af",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "1ed59785c5606459",
+        "type": "ui_group",
+        "name": "歷史趨勢",
+        "tab": "c3628f5f902369af",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "230ec7f4f9806df2",
+        "type": "ui_group",
+        "name": "裝置狀態",
+        "tab": "c3628f5f902369af",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "94740edec8561ebd",
+        "type": "ui_group",
+        "name": "控制",
+        "tab": "c3628f5f902369af",
+        "order": 4,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "29bcc8226683184c",
+        "type": "mqtt in",
+        "name": "A 的資料",
+        "topic": "stust/ee/e501/gNNa/data",
+        "qos": "0",
+        "datatype": "utf8",
+        "broker": "2cfc2da9ea3346d2",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 120,
+        "y": 160,
+        "wires": [
+            [
+                "2722c9b05bc57e46"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "2722c9b05bc57e46",
+        "type": "json",
+        "name": "字串→物件",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 300,
+        "y": 160,
+        "wires": [
+            [
+                "6369e334347ea754",
+                "17ff3424c8a80412"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "17ff3424c8a80412",
+        "type": "debug",
+        "name": "看 payload",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 100,
+        "wires": [],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "6369e334347ea754",
+        "type": "function",
+        "name": "拆欄位",
+        "func": "// 拆欄位：A 板送來的一筆 JSON → 六個輸出（圖表、量表、文字）\nlet d = msg.payload;\nif (typeof d === \"string\") { d = JSON.parse(d); }   // 前面沒轉成物件也不會壞\nconst num = v => typeof v === \"number\" && isFinite(v);\n// 檢查一：溫度和 seq 一定要有，而且 -20 ≤ t < 85（85 常是感測器出錯的值）\nif (!num(d.t) || !num(d.seq) || d.t < -20 || d.t >= 85) {\n    context.set(\"bad\", (context.get(\"bad\") || 0) + 1);\n    node.warn(\"丟掉一筆：\" + JSON.stringify(d));\n    return null;\n}\n// 檢查二：用 seq 算遺失率；seq 變小代表 A 重開機，重新起算\nlet first = context.get(\"first\"), got = context.get(\"got\") || 0;\nif (first === undefined || d.seq < context.get(\"seq\")) { first = d.seq; got = 0; }\ngot += 1;\ncontext.set(\"first\", first); context.set(\"got\", got); context.set(\"seq\", d.seq);\nconst should = d.seq - first + 1;\nconst loss = (100 * (should - got) / should).toFixed(1);\n// 記下收到的時間（平台端蓋時間），給「資料新鮮度」用\nconst now = new Date();\nflow.set(\"lastA\", now.getTime());\n// 六個輸出：缺的欄位那一路送 null（不輸出），不要補 0\nconst out = (name, v) => num(v) ? { topic: name, payload: v } : null;\nreturn [\n    [out(\"AHT20\", d.t), out(\"BMP280\", d.t2)],   // 1 溫度折線：兩條線\n    out(\"溫度\", d.t),                            // 2 溫度量表＋告警\n    out(\"濕度\", d.h),                            // 3 濕度量表\n    out(\"氣壓\", d.p),                            // 4 氣壓折線（自己一張）\n    out(\"照度\", d.lux),                          // 5 照度折線（自己一張）\n    { payload: d.id + \" #\" + d.seq + \"｜\" + now.toTimeString().slice(0, 8)\n               + \" 收到｜遺失 \" + loss + \"%\" }    // 6 最後更新\n];",
+        "outputs": 6,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 280,
+        "wires": [
+            [
+                "95fd238383dc575e"
+            ],
+            [
+                "7c7ef3be05fc156a",
+                "c8e146f55a47fb4e"
+            ],
+            [
+                "f4257bfc0913a95d"
+            ],
+            [
+                "72320cc7cbd3882a"
+            ],
+            [
+                "88b51b8ad7e62ca5"
+            ],
+            [
+                "ef2aca19105dabb9"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "95fd238383dc575e",
+        "type": "ui_chart",
+        "name": "溫度折線",
+        "group": "1ed59785c5606459",
+        "order": 1,
+        "width": "6",
+        "height": "4",
+        "label": "溫度 °C（AHT20、BMP280）",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "等待資料",
+        "dot": false,
+        "ymin": "15",
+        "ymax": "40",
+        "removeOlder": "1",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 710,
+        "y": 140,
+        "wires": [
+            []
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "7c7ef3be05fc156a",
+        "type": "ui_gauge",
+        "name": "溫度量表",
+        "group": "9936e7445c4d1d68",
+        "order": 1,
+        "width": "3",
+        "height": "3",
+        "gtype": "gage",
+        "title": "溫度",
+        "label": "°C",
+        "format": "{{value}}",
+        "min": "15",
+        "max": "40",
+        "colors": [
+            "#2EAD6B",
+            "#F5A524",
+            "#E5484D"
+        ],
+        "seg1": "28",
+        "seg2": "30",
+        "diff": false,
+        "className": "",
+        "x": 710,
+        "y": 200,
+        "wires": [],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "f4257bfc0913a95d",
+        "type": "ui_gauge",
+        "name": "濕度量表",
+        "group": "9936e7445c4d1d68",
+        "order": 2,
+        "width": "3",
+        "height": "3",
+        "gtype": "gage",
+        "title": "濕度",
+        "label": "%RH",
+        "format": "{{value}}",
+        "min": "0",
+        "max": "100",
+        "colors": [
+            "#2EAD6B",
+            "#F5A524",
+            "#E5484D"
+        ],
+        "seg1": "70",
+        "seg2": "80",
+        "diff": false,
+        "className": "",
+        "x": 710,
+        "y": 260,
+        "wires": [],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "72320cc7cbd3882a",
+        "type": "ui_chart",
+        "name": "氣壓折線",
+        "group": "1ed59785c5606459",
+        "order": 2,
+        "width": "6",
+        "height": "4",
+        "label": "氣壓 hPa",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "等待資料",
+        "dot": false,
+        "ymin": "995",
+        "ymax": "1025",
+        "removeOlder": "1",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 710,
+        "y": 320,
+        "wires": [
+            []
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "88b51b8ad7e62ca5",
+        "type": "ui_chart",
+        "name": "照度折線",
+        "group": "1ed59785c5606459",
+        "order": 3,
+        "width": "6",
+        "height": "4",
+        "label": "照度 lux",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "等待資料",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "",
+        "removeOlder": "1",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 710,
+        "y": 380,
+        "wires": [
+            []
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "ef2aca19105dabb9",
+        "type": "ui_text",
+        "group": "9936e7445c4d1d68",
+        "order": 3,
+        "width": "6",
+        "height": "1",
+        "name": "最後更新",
+        "label": "最後更新",
+        "format": "{{msg.payload}}",
+        "layout": "col-center",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 710,
+        "y": 440,
+        "wires": [],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "c8e146f55a47fb4e",
+        "type": "function",
+        "name": "跨越門檻告警",
+        "func": "// 跨越門檻才告警：用 context 記住「現在是不是超標」，再加 0.5 度緩衝\nconst TH = flow.get(\"th\") || 30;      // 門檻：儀表板上可以調，預設 30 度\nconst BAND = 0.5;\nconst t = msg.payload;\nlet hot = context.get(\"hot\") || false;\nif (!hot && t > TH) {                 // 從沒超標變成超標：只送這一次\n    context.set(\"hot\", true);\n    return { topic: \"告警\", payload: \"溫度過高：\" + t + \" °C（門檻 \" + TH + \"）\" };\n}\nif (hot && t < TH - BAND) {           // 降到門檻減 0.5 以下才算解除\n    context.set(\"hot\", false);\n    return { topic: \"解除\", payload: \"溫度恢復：\" + t + \" °C\" };\n}\nreturn null;                          // 狀態沒變：不送，通知不會一直跳",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 930,
+        "y": 200,
+        "wires": [
+            [
+                "ddabc6cd3a39a953",
+                "c5b3a95c49151d92"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "ddabc6cd3a39a953",
+        "type": "ui_toast",
+        "position": "top right",
+        "displayTime": "5",
+        "highlight": "",
+        "sendall": true,
+        "outputs": 0,
+        "ok": "OK",
+        "cancel": "",
+        "raw": false,
+        "className": "",
+        "topic": "",
+        "name": "告警通知",
+        "x": 1120,
+        "y": 170,
+        "wires": [],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "c5b3a95c49151d92",
+        "type": "debug",
+        "name": "看告警",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1110,
+        "y": 230,
+        "wires": [],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "ec686cc708396454",
+        "type": "mqtt in",
+        "name": "A 的狀態",
+        "topic": "stust/ee/e501/gNNa/status",
+        "qos": "0",
+        "datatype": "utf8",
+        "broker": "2cfc2da9ea3346d2",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 120,
+        "y": 520,
+        "wires": [
+            [
+                "8021eaa8bf6355bb"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "de90ac16526806a1",
+        "type": "mqtt in",
+        "name": "B 的狀態",
+        "topic": "stust/ee/e501/gNNb/status",
+        "qos": "0",
+        "datatype": "utf8",
+        "broker": "2cfc2da9ea3346d2",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 120,
+        "y": 580,
+        "wires": [
+            [
+                "ce1b73e627d8c695"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "8021eaa8bf6355bb",
+        "type": "ui_template",
+        "group": "230ec7f4f9806df2",
+        "name": "A 板（gNNa）燈號",
+        "order": 1,
+        "width": "6",
+        "height": "1",
+        "format": "<div style=\"display:flex;align-items:center;gap:12px\">\n  <div style=\"width:24px;height:24px;border-radius:50%\"\n       ng-style=\"{'background': msg.payload == 'online' ? '#2EAD6B' :\n                  (msg.payload == 'offline' ? '#E5484D' : '#9AA4B2')}\"></div>\n  <span>A 板（gNNa）：{{msg.payload || '還沒有消息'}}</span>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 360,
+        "y": 520,
+        "wires": [
+            []
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "ce1b73e627d8c695",
+        "type": "ui_template",
+        "group": "230ec7f4f9806df2",
+        "name": "B 板（gNNb）燈號",
+        "order": 2,
+        "width": "6",
+        "height": "1",
+        "format": "<div style=\"display:flex;align-items:center;gap:12px\">\n  <div style=\"width:24px;height:24px;border-radius:50%\"\n       ng-style=\"{'background': msg.payload == 'online' ? '#2EAD6B' :\n                  (msg.payload == 'offline' ? '#E5484D' : '#9AA4B2')}\"></div>\n  <span>B 板（gNNb）：{{msg.payload || '還沒有消息'}}</span>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 360,
+        "y": 580,
+        "wires": [
+            []
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "16702adabd2e4958",
+        "type": "inject",
+        "name": "每秒檢查",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 130,
+        "y": 660,
+        "wires": [
+            [
+                "b56a25c3fb27c872"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "b56a25c3fb27c872",
+        "type": "function",
+        "name": "資料新鮮度",
+        "func": "// 每秒檢查一次：最後一筆收到多久了？（沒資料進來也要檢查，所以用 inject 每秒觸發）\nconst STALE = 15;                     // 每 5 秒一筆，連續 3 筆沒來＝過期\nconst last = flow.get(\"lastA\");\nif (last === undefined) {\n    return { payload: \"還沒收到 A 的資料\", color: \"#9AA4B2\" };\n}\nconst age = Math.round((Date.now() - last) / 1000);\nif (age > STALE) {\n    return { payload: \"資料已過期：\" + age + \" 秒沒更新\", color: \"#E5484D\" };\n}\nreturn { payload: age + \" 秒前更新\", color: \"#2EAD6B\" };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 660,
+        "wires": [
+            [
+                "53371da83520106c"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "53371da83520106c",
+        "type": "ui_template",
+        "group": "230ec7f4f9806df2",
+        "name": "新鮮度色塊",
+        "order": 3,
+        "width": "6",
+        "height": "1",
+        "format": "<div style=\"padding:6px 12px;border-radius:8px;color:white;font-weight:bold\"\n     ng-style=\"{'background': msg.color || '#9AA4B2'}\">{{msg.payload || '等待中'}}</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 530,
+        "y": 660,
+        "wires": [
+            []
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "4a4c9f6aaf5e2bf3",
+        "type": "inject",
+        "name": "門檻初值 30",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.5",
+        "topic": "",
+        "payload": "30",
+        "payloadType": "num",
+        "x": 140,
+        "y": 720,
+        "wires": [
+            [
+                "4135f9dc0e23af8d"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "4135f9dc0e23af8d",
+        "type": "ui_numeric",
+        "name": "告警門檻",
+        "label": "告警門檻",
+        "tooltip": "",
+        "group": "94740edec8561ebd",
+        "order": 1,
+        "width": "6",
+        "height": "1",
+        "wrap": false,
+        "passthru": false,
+        "topic": "",
+        "topicType": "str",
+        "format": "{{value}} °C",
+        "min": "20",
+        "max": "40",
+        "step": "0.5",
+        "className": "",
+        "x": 330,
+        "y": 720,
+        "wires": [
+            [
+                "9d3c5d446e0aa126"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "9d3c5d446e0aa126",
+        "type": "function",
+        "name": "設定門檻",
+        "func": "// 儀表板調門檻：Node-RED 自己記住，也用 retain 送給 B 板\nflow.set(\"th\", Number(msg.payload));\nreturn { payload: String(msg.payload) };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 720,
+        "wires": [
+            [
+                "236818f48577c162"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "236818f48577c162",
+        "type": "mqtt out",
+        "name": "門檻給 B",
+        "topic": "stust/ee/e501/gNNb/th",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "2cfc2da9ea3346d2",
+        "x": 690,
+        "y": 720,
+        "wires": [],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "1a7bc66f842921c1",
+        "type": "ui_switch",
+        "name": "A 板 LED",
+        "label": "A 板 LED",
+        "tooltip": "",
+        "group": "94740edec8561ebd",
+        "order": 2,
+        "width": "6",
+        "height": "1",
+        "passthru": false,
+        "decouple": "false",
+        "topic": "",
+        "topicType": "str",
+        "style": "",
+        "onvalue": "on",
+        "onvalueType": "str",
+        "onicon": "",
+        "oncolor": "",
+        "offvalue": "off",
+        "offvalueType": "str",
+        "officon": "",
+        "offcolor": "",
+        "animate": false,
+        "className": "",
+        "x": 130,
+        "y": 780,
+        "wires": [
+            [
+                "16cf43cca205bcc8"
+            ]
+        ],
+        "z": "7ff96746a4e1bb18"
+    },
+    {
+        "id": "16cf43cca205bcc8",
+        "type": "mqtt out",
+        "name": "指令給 A",
+        "topic": "stust/ee/e501/gNNa/cmd",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "2cfc2da9ea3346d2",
+        "x": 320,
+        "y": 780,
+        "wires": [],
+        "z": "7ff96746a4e1bb18"
+    }
+]

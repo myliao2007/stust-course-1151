@@ -1,0 +1,13 @@
+# 某同學要讓 A、B 兩片 Pico 用 UART 互傳（主題 2 任務四），
+# A 板另外接 AHT20。他的接線與程式如下：
+#   AHT20 VIN            -> A 板第 40 腳
+#   A 板 GND             -> B 板 GND：沒有接
+#   A 板 GP0（第 1 腳）  -> B 板 GP0（第 1 腳）
+#   A 板 GP1（第 2 腳）  -> B 板 GP1（第 2 腳）
+
+# A 板：
+uart = UART(0, baudrate=115200, tx=Pin(0), rx=Pin(1))
+# B 板：
+uart = UART(0, baudrate=9600, tx=Pin(0), rx=Pin(1))
+
+# 問題：請指出四個錯誤，並寫出正確的接法與參數

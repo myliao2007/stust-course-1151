@@ -1,0 +1,11 @@
+# 老師筆電示範（Windows 命令提示字元 cmd；Mosquitto 安裝時一起裝好 mosquitto_pub／mosquitto_sub）
+# 1. 看全班 A 板的資料（-v 連主題一起印）
+mosquitto_sub -h 192.168.1.10 -p 1883 -t "stust/ee/e501/+/data" -v
+# 2. 看第 7 組 A 板的上下線（retain 的那一筆一訂閱就出現）
+mosquitto_sub -h 192.168.1.10 -t "stust/ee/e501/g07a/status" -v
+# 3. 對第 7 組 A 板送指令（-m 是訊息內容，-q 1 是 QoS 1）
+mosquitto_pub -h 192.168.1.10 -t "stust/ee/e501/g07a/cmd" -m on -q 1
+# 4. 清掉一個主題的保留訊息（-r 保留，-n 空內容）
+mosquitto_pub -h 192.168.1.10 -t "stust/ee/e501/g07a/status" -r -n
+# 5. 看 broker 自己的統計（$SYS 要明寫，# 配不到）
+mosquitto_sub -h 192.168.1.10 -t "$SYS/broker/clients/connected" -v

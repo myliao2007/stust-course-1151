@@ -1,0 +1,6 @@
+保護方式,用哪支程式,封包位元組（B）,封包處理時間（µs）,連線時間（ms）,多用掉的記憶體（B）,擋得住,擋不住
+明文,node_a.py MODE="plain",,,,,,
+AES-CBC 只加密,node_a.py MODE="aes",,,,,,
+AES＋訊息驗證碼＋計數器,node_a.py MODE="seal",,,,,,
+MQTT 明文 1883（教室 Mosquitto）,mqtts_a.py,,,,,,
+MQTTS（TLS 8883）,mqtts_a.py,,,,,,

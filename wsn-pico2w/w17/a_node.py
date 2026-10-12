@@ -9,7 +9,7 @@ led = machine.Pin("LED", machine.Pin.OUT)
 mode, cmd, pend, rtt = "base", None, None, -1
 FP = "學號 %s | 第 %d 組 | 板子 A | 序號 %s | MAC %s" % (
     myid.STUDENT_ID, myid.GROUP, myid.SN, myid.MAC)
-
+P = int(cfg.PERIOD_S * 1000)     # 一格幾毫秒（每 3 秒一格）
 def on_msg(topic, msg):          # B 回的 ack、B 下的指令
     global cmd, pend, rtt
     if topic == cfg.T_ACK and pend and msg == b"%d" % pend[0]:
@@ -38,15 +38,15 @@ if cfg.WDT_ON:                   # 看門狗：8 秒沒餵就重開
     util.use_wdt(machine.WDT(timeout=cfg.WDT_MS))
 ctr = counter.start()            # 計數器：重開機也不倒退（主題 14）
 util.log("開機，計數器從 %d 起跳" % (ctr + 1))
-c, t0, slot, last_t, last_tx = None, time.ticks_ms(), 0, None, 0
+c, nxt, slot, last_t, last_tx = None, time.ticks_ms(), 0, None, 0
 while True:
     if c is None:
         c = util.retry(up)       # 斷線：退避重試，十次都失敗才重開機
         set_mode(mode)
     try:
-        k = time.ticks_diff(time.ticks_ms(), t0) // int(cfg.PERIOD_S * 1000)
-        if k >= slot:            # 新的一格（每 3 秒）：seq＝第幾格
-            slot = k + 1
+        k = time.ticks_diff(time.ticks_ms(), nxt) // P   # 到下一格了沒（不怕繞回）
+        if k >= 0:               # 新的一格（每 3 秒）：seq＝第幾格
+            slot, nxt = slot + k + 1, time.ticks_add(nxt, (k + 1) * P)
             d = sensors.read_all()
             gc.collect()
             quiet = time.ticks_diff(time.ticks_ms(), last_tx) < cfg.ECO_MAX_S * 1000

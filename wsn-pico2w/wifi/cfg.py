@@ -1,11 +1,10 @@
-# cfg.py：全組共用的設定，兩片板子都要存一份。只要改第一行的組號
-GROUP = 5                               # ← 改成你們的組號
+GROUP = 5                               # ← 第 1 行：改成你們的組號
+SSID = "你的手機熱點名稱"                # ← 第 2 行：手機熱點的名稱，照手機上顯示的抄（練習 2 用）
+PASSWORD = "你的熱點密碼"                # ← 第 3 行：手機熱點的密碼（練習 2 用）
 
-# ---- 下面由組號自動算出來，不用改 ----
-HOTSPOT_SSID = "WSN-G%02d" % GROUP      # 手機熱點名稱（第 5 組是 WSN-G05）
-HOTSPOT_PASS = "wsnpico%02d" % GROUP    # 手機熱點密碼（第 5 組是 wsnpico05）
+# ---- cfg.py 是全組共用的設定，兩片板子都存一份（組號要一樣）。下面自動算出來，不用改 ----
 AP_SSID = "PicoAP-G%02d" % GROUP        # 收集端自己開的 Wi-Fi 名稱
-AP_PASS = "wsnpico%02d" % GROUP         # 收集端 Wi-Fi 密碼（和熱點一樣）
+AP_PASS = "wsnpico%02d" % GROUP         # 收集端 Wi-Fi 密碼（第 5 組是 wsnpico05）
 COLLECTOR_IP = "192.168.4.1"            # 收集端開 AP 時，自己的 IP 固定是這個
 PORT = 5000 + GROUP                     # UDP 埠號（第 5 組是 5005）
 

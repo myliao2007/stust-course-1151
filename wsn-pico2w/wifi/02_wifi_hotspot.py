@@ -18,8 +18,8 @@ for ssid, bssid, ch, rssi, sec, hidden in nets[:8]:
     print("  %-18s 頻道 %2d　RSSI %d dBm"
           % (name, ch, rssi))
 
-print("連線到", cfg.HOTSPOT_SSID, "…")
-wlan.connect(cfg.HOTSPOT_SSID, cfg.HOTSPOT_PASS)
+print("連線到", cfg.SSID, "…")
+wlan.connect(cfg.SSID, cfg.PASSWORD)
 for i in range(20):
     st = wlan.status()
     if st == 3 or st < 0:

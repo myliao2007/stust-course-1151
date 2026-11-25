@@ -2,7 +2,7 @@ SSID = "你的手機熱點名稱"                       # ← 第 1 行：手機
 PASSWORD = "你的熱點密碼"                       # ← 第 2 行：手機熱點的密碼
 AIO_USER = "your_username"                   # ← 第 3 行：Adafruit IO 的 Username（大小寫要一樣）
 AIO_KEY = "aio_XXXXXXXXXXXXXXXXXXXXXXXXXXXX"   # ← 第 4 行：Adafruit IO 的 Key：等於密碼，不要給別組看
-# 上面四行改好就好：第 1、2 行練習 2 填，第 3、4 行練習 3 填；下面不用動
+# 上面四行改好就好：第 1、2 行是手機熱點，先填；第 3、4 行註冊 Adafruit IO 之後再填；下面不用動
 SERVER = "io.adafruit.com"                   # Adafruit IO 的 MQTT 伺服器
 PORT = 1883                                  # 課堂用 1883（不加密）；正式作品改用 8883（加密）
 

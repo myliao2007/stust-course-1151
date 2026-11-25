@@ -1,8 +1,7 @@
-# aio_cfg.py：Adafruit IO 練習的設定。只要改最上面三行
 GROUP = 5                                    # ← 改成你們的組號
 AIO_USER = "your_username"                   # ← Adafruit IO 的 Username（大小寫要一樣）
 AIO_KEY = "aio_XXXXXXXXXXXXXXXXXXXXXXXXXXXX"   # ← Adafruit IO 的 Key：等於密碼，不要給別組看
-
+# 上面三行改好就好（第 1 行組號、第 2 行 Username、第 3 行 Key），下面不用動
 HOTSPOT_SSID = "WSN-G%02d" % GROUP           # 手機熱點名稱：第 5 組是 WSN-G05
 HOTSPOT_PASS = "wsnpico%02d" % GROUP         # 手機熱點密碼：第 5 組是 wsnpico05
 SERVER = "io.adafruit.com"                   # Adafruit IO 的 MQTT 伺服器

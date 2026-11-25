@@ -28,6 +28,7 @@
 | [`crypto`](crypto/) | 加密與解密：AES、SHA-256、亂數、Base64 |
 | [`parts`](parts/) | 零件認識與模組接線：18 項材料的範例程式 |
 | [`wifi`](wifi/) | Wi-Fi 兩板對傳：收集端開 AP、節點用 UDP 送資料、OLED 顯示、警示、送達率實驗 |
+| [`scan`](scan/) | 掃描 Wi-Fi SSID：每 5 秒掃描附近的基地台，列出名稱、RSSI、頻道、加密方式（原 ESP32-S3 版改寫） |
 
 ## 每個主題都一樣的三件事
 

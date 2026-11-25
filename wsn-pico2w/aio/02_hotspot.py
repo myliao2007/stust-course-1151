@@ -10,7 +10,7 @@ nets = wlan.scan()
 nets.sort(key=lambda x: x[3], reverse=True)   # 照 RSSI 由強到弱排
 for ssid, bssid, ch, rssi, sec, hidden in nets[:5]:
     try:
-        name = ssid.decode().replace("\x00", "") or "(hidden)"   # 隱藏名稱的熱點顯示 (hidden)
+        name = ssid.decode().replace("\x00", "") or "(hidden)"  # 隱藏的熱點沒有名稱
     except Exception:
         name = "(看不懂的名稱)"
     print("  %-18s 頻道 %2d　RSSI %d dBm"
